@@ -10,7 +10,7 @@ Get **`dlssnr-linux-portable.zip`** and **`dlssnr-linux-portable.zip.sha256`**
 from the [release assets](https://github.com/CaptSilver/DLSS-NR-on-AMD-Linux/releases).
 GitHub's automatic **Source code** archives are for developers, not the prebuilt installer.
 
-[Release notes](docs/releases/0.5.0.md) · [Changelog](CHANGELOG.md)
+[Release notes](docs/releases/0.6.0.md) · [Changelog](CHANGELOG.md)
 
 ## Install or update
 
@@ -53,7 +53,7 @@ separately for each game; do not mix individual DLLs between releases.
 | [Atomic Heart](docs/games/atomic-heart.md) | DLSS input → OptiScaler → FSR |
 
 A setup guide is not a guarantee of compatibility with every release, GPU,
-runner or display configuration. Check the [release coverage and limitations](docs/releases/0.5.0.md#coverage-and-limitations)
+runner or display configuration. Check the [release coverage and limitations](docs/releases/0.6.0.md#coverage-and-limitations)
 for the tested version, settings and hardware. Intermittent processing spikes
 remain a known limitation.
 

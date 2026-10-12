@@ -87,4 +87,4 @@ launcher settings. No personal logs are included in the downloadable package.
 Logs generated on your computer may contain paths and hardware identifiers;
 review and redact them before sharing. `DLSSNR_DIAGNOSTICS=0` disables extra bridge tracing.
 
-[Installation](INSTALL.md) · [Current coverage](releases/0.5.0.md#coverage-and-limitations)
+[Installation](INSTALL.md) · [Current coverage](releases/0.6.0.md#coverage-and-limitations)

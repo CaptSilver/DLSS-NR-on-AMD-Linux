@@ -99,7 +99,7 @@ with the required model. The installer verifies the input before converting it.
 Existing model data is reused. Fresh conversion uses a separately pinned
 headless converter in a temporary directory; that converter is not installed as
 the game's runtime. The game receives the runtime specified by the chosen package.
-See [release coverage](releases/0.5.0.md#coverage-and-limitations) for extraction
+See [release coverage](releases/0.6.0.md#coverage-and-limitations) for extraction
 checks and [source provenance](../PROVENANCE.json) for exact component versions.
 
 The package's pinned original setup is downloaded and checksum-verified during installation.
