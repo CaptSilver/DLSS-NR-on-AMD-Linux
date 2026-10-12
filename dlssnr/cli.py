@@ -233,11 +233,11 @@ def require(accepted, interactive, question, flag):
 
 
 def data_dir(args):
-    base = args.data_dir or Path(os.environ.get('XDG_DATA_HOME') or Path.home() / '.local/share') / 'dlssnr-linux'
-    base = Path(base).expanduser()
-    if not base.is_absolute():
-        raise RuntimeError('--data-dir / XDG_DATA_HOME must be absolute.')
-    return base
+    if args.data_dir:
+        # Only the parents are the user's layout; the data dir itself stays strict.
+        path = Path(args.data_dir).expanduser()
+        return deploy.trusted_base(path.parent, '--data-dir') / path.name
+    return deploy.data_home() / 'dlssnr-linux'
 
 
 def check_host(manifest):

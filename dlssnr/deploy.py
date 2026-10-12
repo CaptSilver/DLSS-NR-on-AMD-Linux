@@ -49,6 +49,22 @@ def _safe(path, *, directory=False, missing=False):
     return path
 
 
+def trusted_base(path, name):
+    """Resolve a user-chosen base directory before _safe() sees anything below it.
+
+    Symlinks above the base are the user's own layout (e.g. /home -> var/home on
+    ostree systems); the installer's own tree under the base stays strict.
+    """
+    path = Path(path).expanduser()
+    if not path.is_absolute():
+        raise RuntimeError(f'{name} must be absolute')
+    return Path(os.path.realpath(path))
+
+
+def data_home():
+    return trusted_base(os.environ.get('XDG_DATA_HOME') or Path.home() / '.local/share', 'XDG_DATA_HOME')
+
+
 def _exe(exe):
     path = _safe(exe)
     if path.suffix.lower() != '.exe':
@@ -293,10 +309,7 @@ def _mount(path, loader=False):
 
 
 def _cache_path(digest):
-    base = Path(os.environ.get('XDG_DATA_HOME') or Path.home() / '.local/share')
-    if not base.is_absolute():
-        raise RuntimeError('XDG_DATA_HOME must be absolute')
-    result = base / 'dlssnr-linux/native' / digest / 'bridge.so'
+    result = data_home() / 'dlssnr-linux/native' / digest / 'bridge.so'
     _mount(result, loader=True)
     _safe(result, missing=True)
     return result
