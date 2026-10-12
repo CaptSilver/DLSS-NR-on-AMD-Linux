@@ -7,7 +7,7 @@ and [guentra's Linux port](https://github.com/guentra/DLSS-NR-on-AMD-Linux).
 ## Download
 
 Get **`dlssnr-linux-portable.zip`** and **`dlssnr-linux-portable.zip.sha256`**
-from the [release assets](https://github.com/bulacha3/DLSS-NR-on-AMD-Linux/releases).
+from the [release assets](https://github.com/CaptSilver/DLSS-NR-on-AMD-Linux/releases).
 GitHub's automatic **Source code** archives are for developers, not the prebuilt installer.
 
 [Release notes](docs/releases/0.5.0.md) · [Changelog](CHANGELOG.md)
@@ -99,7 +99,7 @@ an unrecognized or modified file; do not delete it blindly.
 [lmxxf](https://github.com/lmxxf/dlss5-on-amd-9070xt-porting) ·
 [vkd3d-proton](https://github.com/HansKristian-Work/vkd3d-proton) ·
 [OptiScaler](https://github.com/optiscaler/OptiScaler) and their contributors.
-Linux maintenance: **bulacha3**.
+Linux maintenance: **CaptSilver**, continuing the port by **bulacha3** and **guentra**.
 
 Independent community project, not affiliated with NVIDIA or AMD.
 Licensed under GPL-2.0-only (see [LICENSE](LICENSE) and [COPYING](COPYING)). [Source origins and license notices](THIRD-PARTY.md).

@@ -182,7 +182,7 @@ def guided_upscaler(args, evidence):
         '3': 'Not sure / not configured yet'})
     if choice == '3':
         print('Check the game settings for FSR 3/4, or configure OptiScaler using the game setup guide.')
-        print('Game setup guides: https://github.com/bulacha3/DLSS-NR-on-AMD-Linux#game-profiles-and-current-coverage')
+        print('Game setup guides: https://github.com/CaptSilver/DLSS-NR-on-AMD-Linux#game-profiles-and-current-coverage')
         raise InstallerCancelled('Confirm a supported upscaler route before installing.')
     args.confirm_fsr = True
     args._upscaler_route = 'native' if choice == '1' else 'optiscaler'
