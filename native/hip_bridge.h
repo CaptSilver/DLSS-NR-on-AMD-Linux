@@ -2,7 +2,7 @@
 #ifndef DLSSNR_HIP_BRIDGE_H
 #define DLSSNR_HIP_BRIDGE_H
 
-#define DLSSNR_HIP_MAGIC 0x344849504E524C44ULL /* "DLNRHIP4"; incompatible tables are rejected */
+#define DLSSNR_HIP_MAGIC 0x354849504E524C44ULL /* "DLNRHIP5"; incompatible tables are rejected */
 #define DLSSNR_HIP_ENV "DLSSNR_HIP_BRIDGE"
 #define DLSSNR_HIP_ADDR_FILE "/tmp/dlssnr_hip_bridge.addr"
 
@@ -66,6 +66,10 @@ typedef struct {
     int (*p_hipDeviceGetStreamPriorityRange)(int *least, int *greatest);
     int (*p_hipStreamCreateWithPriority)(void **stream, unsigned int flags, int priority);
     int (*p_hipStreamDestroy)(void *stream);
+    /* ABI 5: the pinned host-memory calls upstream 0.6.0 imports, forwarded
+     * unchanged to HIP. */
+    int (*p_hipHostMalloc)(void **ptr, u64 size, unsigned int flags);
+    int (*p_hipHostGetDevicePointer)(void **devPtr, void *hstPtr, unsigned int flags);
 } DlssnrHipBridge;
 
 #endif

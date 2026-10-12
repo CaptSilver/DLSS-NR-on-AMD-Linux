@@ -57,7 +57,7 @@ def validate_components(root):
     if (bridge[:5] != b'\x7fELF\x02' or len(bridge) < 64
             or struct.unpack_from('<H', bridge, 18)[0] != 62
             or b'DLSSNR_ORDERED_ABI_V3' not in bridge
-            or b'DLSSNR_HIP_ABI_V4' not in bridge):
+            or b'DLSSNR_HIP_ABI_V5' not in bridge):
         raise ValueError('Missing x86_64 ordered HIP bridge')
     if b'NR: cannot establish producer/consumer boundary' not in content['d3d12core.dll']:
         raise ValueError('D3D12 core lacks the ordered integration patch')

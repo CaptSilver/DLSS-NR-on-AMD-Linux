@@ -14,14 +14,15 @@ class PriorityContractTests(unittest.TestCase):
         from dlssnr import legacy_converter
         self.assertEqual(upstream.HIP_IMPORTS - legacy_converter.HIP_IMPORTS,
             {'hipGetDevice','hipOccupancyMaxActiveBlocksPerMultiprocessor',
-             'hipDeviceGetStreamPriorityRange','hipStreamCreateWithPriority','hipStreamDestroy'})
-        self.assertEqual(len(upstream.HIP_IMPORTS),38)
+             'hipDeviceGetStreamPriorityRange','hipStreamCreateWithPriority','hipStreamDestroy',
+             'hipHostMalloc','hipHostGetDevicePointer'})
+        self.assertEqual(len(upstream.HIP_IMPORTS),40)
 
     def test_previous_hip_table_rejected_by_package(self):
         manifest = json.loads((ROOT/'assets/manifest.json').read_text())
         manifest['files'] = {name:'0'*64 for name in upstream.COMPONENTS}
         assets.require_deployable(manifest)
-        for old in (1,2,3):
+        for old in (1,2,3,4):
             with self.subTest(old=old), self.assertRaises(RuntimeError):
                 assets.require_deployable(dict(manifest,hip_bridge_abi=old))
 
@@ -54,7 +55,7 @@ int main(void){
     DlssnrHipBridge t={0};g=&t;int least=91,greatest=92;void *out=0;
     t.p_hipDeviceGetStreamPriorityRange=range;
     t.p_hipStreamCreateWithPriority=create;t.p_hipStreamDestroy=destroy;
-    t.magic=0x334849504E524C44ULL;
+    t.magic=0x344849504E524C44ULL;
     assert(hipDeviceGetStreamPriorityRange(&least,&greatest)==3);
     assert(hipStreamCreateWithPriority(&out,0x80000001u,-3)==3);
     assert(hipStreamDestroy((void *)0x123456789ULL)==3 && !called);
@@ -96,7 +97,7 @@ int main(void){
     g_hip_ok=1;real.p_hipDeviceGetStreamPriorityRange=range;
     real.p_hipStreamCreateWithPriority=create;real.p_hipStreamDestroy=destroy;
     int lo=0,hi=0;void *s=0;
-    assert(g_bridge.magic==0x344849504E524C44ULL);
+    assert(g_bridge.magic==0x354849504E524C44ULL);
     assert(g_bridge.p_hipDeviceGetStreamPriorityRange(&lo,&hi)==0 && lo==1 && hi==-1);
     assert(g_bridge.p_hipStreamCreateWithPriority(&s,1,-1)==0 && s==(void *)0x123456789ULL);
     assert(g_bridge.p_hipStreamDestroy(s)==0);

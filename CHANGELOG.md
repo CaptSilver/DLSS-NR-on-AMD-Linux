@@ -1,5 +1,15 @@
 # Release notes
 
+## 0.6.0 — Linux / Proton
+
+- Re-pin the upstream setup to v0.6.0: setup size and SHA-256, embedded payload offset,
+  size and SHA-256, and the payload offsets of the synchronization shaders. The shader
+  hashes are unchanged, so the D3D12 components are unchanged.
+- Bridge ABI 5: add `hipHostMalloc` and `hipHostGetDevicePointer`, the two host-memory
+  calls the 0.6.0 runtime imports. The bridge table magic changes and older tables are rejected.
+- Tests: host-memory forwarding in the native and PE bridges, loading of both symbols
+  through a stand-in HIP library, and the 0.6.0 pins and import surface.
+
 ## 0.5.0 — Linux / Proton
 
 - Stage upstream 0.5.0 using pinned bytes, checksum and embedded payload bounds.

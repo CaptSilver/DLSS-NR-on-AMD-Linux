@@ -297,6 +297,16 @@ EXPORT int hipStreamDestroy(void *stream) {
     return ((int SYSV (*)(void *))g->p_hipStreamDestroy)(stream);
 }
 
+EXPORT int hipHostMalloc(void **ptr, u64 size, unsigned int flags) {
+    if (!bridge_ok() || !g->p_hipHostMalloc) return HIP_ERROR_NOT_INITIALIZED;
+    return ((int SYSV (*)(void **, u64, unsigned int))g->p_hipHostMalloc)(ptr, size, flags);
+}
+
+EXPORT int hipHostGetDevicePointer(void **devPtr, void *hstPtr, unsigned int flags) {
+    if (!bridge_ok() || !g->p_hipHostGetDevicePointer) return HIP_ERROR_NOT_INITIALIZED;
+    return ((int SYSV (*)(void **, void *, unsigned int))g->p_hipHostGetDevicePointer)(devPtr, hstPtr, flags);
+}
+
 EXPORT int hipStreamSynchronize(void *stream) {
     if (!bridge_ok() || !g->p_hipStreamSynchronize) return HIP_ERROR_NOT_INITIALIZED;
     return ((int SYSV (*)(void *))g->p_hipStreamSynchronize)(stream);

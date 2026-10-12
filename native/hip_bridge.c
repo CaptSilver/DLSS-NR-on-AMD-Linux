@@ -19,7 +19,7 @@
 #include <errno.h>
 
 /* Keep stubs in g_bridge forever. Real HIP lives in `real`. */
-const char dlssnr_hip_abi_marker[] = "DLSSNR_HIP_ABI_V4";
+const char dlssnr_hip_abi_marker[] = "DLSSNR_HIP_ABI_V5";
 static DlssnrHipBridge g_bridge;
 static DlssnrHipBridge real;
 static void *g_hip;
@@ -371,6 +371,10 @@ static int ensure_hip(void) {
     real.p_hipStreamDestroy = must_dlsym("hipStreamDestroy");
     if (!real.p_hipDeviceGetStreamPriorityRange || !real.p_hipStreamCreateWithPriority
             || !real.p_hipStreamDestroy)
+        return -1;
+    real.p_hipHostMalloc = must_dlsym("hipHostMalloc");
+    real.p_hipHostGetDevicePointer = must_dlsym("hipHostGetDevicePointer");
+    if (!real.p_hipHostMalloc || !real.p_hipHostGetDevicePointer)
         return -1;
     g_hip_ok = 1;
     if (real.p_hipEventCreate)
@@ -861,6 +865,20 @@ static int stub_streamdestroy(void *stream) {
     logmsg("stream destroy err=%d", result);
     return result;
 }
+/* The PE side and HIP share one address space, so the pinned host pointer and
+ * the flags (hipHostMallocMapped etc.) cross unchanged. */
+static int stub_hostmalloc(void **ptr, u64 size, unsigned int flags) {
+    if (ensure_hip() || !real.p_hipHostMalloc) return 3;
+    int result = real.p_hipHostMalloc(ptr, size, flags);
+    logmsg("host malloc bytes=%llu flags=0x%x err=%d", size, flags, result);
+    return result;
+}
+static int stub_hostgetdevptr(void **dev, void *host, unsigned int flags) {
+    if (ensure_hip() || !real.p_hipHostGetDevicePointer) return 3;
+    int result = real.p_hipHostGetDevicePointer(dev, host, flags);
+    if (result) logmsg("host device pointer failed err=%d", result);
+    return result;
+}
 static int stub_streamsync(void *stream) {
     if (ensure_hip() || !real.p_hipStreamSynchronize) return 3;
     int result = real.p_hipStreamSynchronize(stream);
@@ -962,6 +980,8 @@ __attribute__((constructor)) static void dlssnr_hip_init(void) {
     g_bridge.p_hipDeviceGetStreamPriorityRange = stub_priority_range;
     g_bridge.p_hipStreamCreateWithPriority = stub_streamcreate_priority;
     g_bridge.p_hipStreamDestroy = stub_streamdestroy;
+    g_bridge.p_hipHostMalloc = stub_hostmalloc;
+    g_bridge.p_hipHostGetDevicePointer = stub_hostgetdevptr;
     g_bridge.p_hipStreamSynchronize = stub_streamsync;
     g_bridge.p_hipEventRecord = stub_evrec;
     g_bridge.p_hipEventSynchronize = stub_evsync;

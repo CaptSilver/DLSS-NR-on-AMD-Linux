@@ -68,14 +68,20 @@ class Official040Tests(unittest.TestCase):
         self.assertEqual(found,upstream.HIP_IMPORTS)
         self.assertEqual(found-legacy_converter.HIP_IMPORTS,
             {'hipGetDevice','hipOccupancyMaxActiveBlocksPerMultiprocessor',
-             'hipDeviceGetStreamPriorityRange','hipStreamCreateWithPriority','hipStreamDestroy'})
+             'hipDeviceGetStreamPriorityRange','hipStreamCreateWithPriority','hipStreamDestroy',
+             'hipHostMalloc','hipHostGetDevicePointer'})
 
-    @unittest.skipUnless(os.environ.get('DLSSNR_TEST_VKD3D_SOURCE'),'patched vkd3d source required')
-    def test_actual_current_recorder_with_ordered_bridge(self):
-        import importlib.util
+    # The recorder RVAs below are 0.5.0 addresses, so this runs only against a
+    # 0.5.0 setup, never the pinned current one.
+    @unittest.skipUnless(os.environ.get('DLSSNR_TEST_VKD3D_SOURCE') and os.environ.get('DLSSNR_TEST_SETUP_050'),
+        'patched vkd3d source and a 0.5.0 setup (DLSSNR_TEST_SETUP_050) required: reads the 0.5.0 recorder at RVAs 0x19b90, 0x834f0, 0x83508')
+    def test_050_recorder_with_ordered_bridge(self):
+        import hashlib,importlib.util
         spec=importlib.util.spec_from_file_location('audit',ROOT/'scripts/audit_upstream.py')
         audit=importlib.util.module_from_spec(spec);spec.loader.exec_module(audit)
-        payload=self.payload();pe=audit.PE(payload)
+        setup=Path(os.environ['DLSSNR_TEST_SETUP_050']).read_bytes()
+        self.assertEqual(hashlib.sha256(setup).hexdigest(),'39df94a0c94b8194135cb2f85aedcc9225a7a62a66fb8adee600729fceab145e')
+        payload=setup[2496351:2496351+38703616];pe=audit.PE(payload)
         def at(rva,size):return payload[pe.mapped(rva,size):pe.mapped(rva,size)+size]
         with tempfile.TemporaryDirectory() as tmp:
             tmp=Path(tmp);code=tmp/'recording.bin'
