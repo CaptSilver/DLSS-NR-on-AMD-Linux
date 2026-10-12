@@ -102,4 +102,4 @@ an unrecognized or modified file; do not delete it blindly.
 Linux maintenance: **bulacha3**.
 
 Independent community project, not affiliated with NVIDIA or AMD.
-[Source origins and license notices](THIRD-PARTY.md).
+Licensed under GPL-2.0-only (see [LICENSE](LICENSE) and [COPYING](COPYING)). [Source origins and license notices](THIRD-PARTY.md).

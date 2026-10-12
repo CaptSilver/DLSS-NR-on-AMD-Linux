@@ -16,7 +16,7 @@ from dlssnr import upstream
 ARCHIVE_ROOT = 'dlssnr-linux-portable'
 PACKAGE_FILES = (
     'installer.py', 'install.sh', 'stage_upstream.py', 'build_release.py',
-    'README.md', 'CHANGELOG.md', 'THIRD-PARTY.md', 'PROVENANCE.json', 'LICENSE',
+    'README.md', 'CHANGELOG.md', 'THIRD-PARTY.md', 'PROVENANCE.json', 'LICENSE', 'COPYING',
     'docs/TROUBLESHOOTING.md', 'docs/INSTALL.md',
     'docs/games/cyberpunk-2077.md', 'docs/games/007-first-light.md', 'docs/games/atomic-heart.md',
     'dlssnr/assets.py', 'dlssnr/cli.py', 'dlssnr/conversion.py', 'dlssnr/lmxxf.py', 'dlssnr/numpy-wheels.json',
