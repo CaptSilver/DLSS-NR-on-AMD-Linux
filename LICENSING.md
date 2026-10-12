@@ -1,0 +1,22 @@
+# Licensing
+
+SPDX-License-Identifier: GPL-2.0-only
+
+This project is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License, version 2 only, as published by
+the Free Software Foundation. The full text is in LICENSE.
+
+It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+Some code entered this project under the MIT license. It is distributed here
+under GPL-2.0-only, and its original notices are kept as MIT requires:
+licenses/PROJECT-MIT.txt and licenses/LMXXF-MIT.txt.
+
+The vkd3d-proton patch in sources/ derives from vkd3d-proton, which is licensed
+under the GNU Lesser General Public License 2.1; section 3 of that license
+allows it to be distributed under GPL-2.0, as it is here. vkd3d-proton's own
+license, copying terms and authors are in licenses/.
+
+Origins and credits are listed in THIRD-PARTY.md.

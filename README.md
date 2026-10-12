@@ -102,4 +102,4 @@ an unrecognized or modified file; do not delete it blindly.
 Linux maintenance: **CaptSilver**, continuing the port by **bulacha3** and **guentra**.
 
 Independent community project, not affiliated with NVIDIA or AMD.
-Licensed under GPL-2.0-only (see [LICENSE](LICENSE) and [COPYING](COPYING)). [Source origins and license notices](THIRD-PARTY.md).
+Licensed under GPL-2.0-only (see [LICENSE](LICENSE) and [LICENSING.md](LICENSING.md)). [Source origins and license notices](THIRD-PARTY.md).

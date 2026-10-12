@@ -24,7 +24,7 @@
 - **NumPy:** used by legacy model-preparation helpers when applicable; not bundled.
   Separately installed wheels retain their original notices.
 
-This project is licensed under GPL-2.0-only; see `LICENSE` and `COPYING`.
+This project is licensed under GPL-2.0-only; see `LICENSE` and `LICENSING.md`.
 Integration helpers and tests that were written under the MIT license keep
 their notice in `licenses/PROJECT-MIT.txt` and are distributed here under
 GPL-2.0-only. The licenses of external software that is downloaded rather than
