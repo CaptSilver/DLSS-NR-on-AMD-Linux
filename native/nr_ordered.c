@@ -404,6 +404,29 @@ static int nr_try_startup_probe(const void *f, dim3_t grid, dim3_t block,
         while (*p != pins) p = &(*p)->next;
         *p = pins->next;
         resource->probe_busy = 0;
+        /* A finished 1-2-3 probe sequence means the mod started a new session
+         * on this flag buffer: same token, frame numbers back at 1. Without a
+         * reset, slot 1 still holds the old session's consumed frame 1 and the
+         * new frame 1 is refused. If anything became busy while the probe ran,
+         * keep the live state and leave the frames alone; the stale slots then
+         * stay until a later probe finds the resource idle. */
+        if (kind == 3 && !*result && resource->active) {
+            if (nr_resource_busy(resource)) {
+                logmsg("session reset skipped token=%llu: resource busy",
+                       (unsigned long long)resource->token);
+            } else {
+                /* The mod rebuilds only once the GPU is idle, so an output still
+                 * waiting for its consumer means that assumption broke. */
+                for (unsigned i = 0; i < NR_ORDERED_WINDOW; ++i) {
+                    const struct nr_frame_state *s = &resource->frames[i];
+                    if (s->used && s->output_ready && !s->consumed)
+                        logmsg("session reset dropped unconsumed frame=%u token=%llu",
+                               s->frame, (unsigned long long)resource->token);
+                }
+                memset(resource->frames, 0, sizeof(resource->frames));
+                pthread_cond_broadcast(&nr_condition);
+            }
+        }
         pthread_mutex_unlock(&nr_mutex);
         nr_release_pins(pins);
     }
