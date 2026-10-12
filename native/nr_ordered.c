@@ -494,7 +494,10 @@ static int nr_route_job_launch(const void *f, void *stream) {
         return stream == nr_job.stream ? 0 : nr_job_error(1);
     if (nr_job.work_bound)
         return stream == nr_job.work_stream ? 0 : nr_job_error(1);
-    if (f != g_k_import)
+    /* 0.6.0 runs k_expo_resolve on the work stream ahead of k_import when the
+     * game supplies an exposure texture, so either kernel may open the work
+     * stream. Both run after wait-input, so the input is already published. */
+    if (f != g_k_import && (!g_k_expo_resolve || f != g_k_expo_resolve))
         return stream == nr_job.stream ? 0 : nr_job_error(1);
     /* Only the reviewed null-marker -> explicit-work transition is supported.
      * Drain the marker queue before launching work on another queue, so any

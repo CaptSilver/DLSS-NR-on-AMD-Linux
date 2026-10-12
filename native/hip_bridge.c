@@ -32,6 +32,7 @@ static void *g_flag_wait;
 static void *g_flag_set;
 static void *g_k_export;
 static void *g_k_import;
+static void *g_k_expo_resolve;
 static void *g_done_event;
 static int (*p_hipStreamSynchronize)(void *stream);
 static int (*p_hipImportExternalSemaphore)(void **out, const void *desc);
@@ -649,6 +650,9 @@ static void stub_reg_fn(void **mo, const void *hf, char *df, const char *dn, uns
             logmsg("kernel %s hf=%p", dn, hf);
         } else if (strstr(dn, "k_import")) {
             g_k_import = (void *)hf;
+            logmsg("kernel %s hf=%p", dn, hf);
+        } else if (strstr(dn, "k_expo_resolve")) {
+            g_k_expo_resolve = (void *)hf;
             logmsg("kernel %s hf=%p", dn, hf);
         }
     }

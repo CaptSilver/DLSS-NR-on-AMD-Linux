@@ -59,6 +59,7 @@ int main(int argc,char **argv) {
     g_hip_ok=1;real.p_hipLaunchKernel=native_launch;
     real.p_hipStreamSynchronize=native_sync;real.p_hipDeviceSynchronize=device_sync;
     g_flag_wait=(void *)1;g_flag_set=(void *)2;g_k_import=(void *)3;g_k_export=(void *)4;
+    g_k_expo_resolve=(void *)6;
     uint32_t flags[16]={0},frame=1,limit=20000000;
     void *flag_ptr=flags,*abort_ptr=(void *)0x3000;
     void *wait_args[]={&flag_ptr,&frame,&limit};
@@ -80,6 +81,9 @@ int main(int argc,char **argv) {
         assert(send(g_k_import,ordinary_args,work_stream)==1 && !launches);
         goto recover;
     }
+    /* 0.6.0 resolves the game's exposure on the work stream before k_import
+     * when the game supplies an exposure texture. */
+    if(scenario==16) assert(!send(g_k_expo_resolve,ordinary_args,work_stream));
     if(scenario==5)fail_kind=1;
     int rc=send(g_k_import,ordinary_args,work_stream);
     if(scenario==5){assert(rc==719 && !launches);goto recover;}

@@ -17,7 +17,7 @@ class OrderedPriorityRegression(unittest.TestCase):
                 '-Werror=incompatible-pointer-types','-fsanitize=address,undefined',
                 '-fno-pie','-no-pie',str(ROOT/'tests/priority_ordered_contract.c'),
                 '-ldl','-o',str(exe)],check=True,capture_output=True,timeout=30)
-            for scenario in range(16):
+            for scenario in range(17):
                 with self.subTest(scenario=scenario):
                     subprocess.run([str(exe),str(scenario)],check=True,
                         capture_output=True,timeout=5,
