@@ -18,6 +18,24 @@ SYSTEM_COMPATIBILITY_ROOTS = (
 )
 REQUIRED_WINE_SYMBOLS = frozenset((
     'd3dkmt_open_resource', 'd3dkmt_object_get_fd', 'd3dkmt_destroy_resource'))
+# Names the vendors ship inside a game folder. Folders match whole names and the
+# rest only match binaries: words like "ricochet" or "vanguard" turn up in mod
+# folders and game scripts, so a hit on any file name is no evidence.
+ANTI_CHEAT_FOLDERS = {'easyanticheat': 'EasyAntiCheat', 'easyanticheat_eos': 'EasyAntiCheat',
+                      'battleye': 'BattlEye', 'xigncode': 'XIGNCODE', 'gameguard': 'nProtect',
+                      'anticheatexpert': 'AntiCheatExpert'}
+# Exact name only: FACEIT also ships FACEIT_Start_Protected_Game.exe, which a
+# fragment would label as EasyAntiCheat.
+ANTI_CHEAT_BINARIES = {'start_protected_game.exe': 'EasyAntiCheat'}
+# Short vendor names must start the binary name, or youtubeclient.dll reads as
+# BattlEye's BEClient and statsguard64.dll as ACE's SGuard64.
+ANTI_CHEAT_PREFIXES = {'beclient': 'BattlEye', 'beservice': 'BattlEye', 'randgrid': 'Ricochet',
+                       'faceit_start_protected_game': 'FACEIT', 'faceitac': 'FACEIT',
+                       'ace-setup': 'AntiCheatExpert', 'sguard64': 'AntiCheatExpert',
+                       'sguardsvc': 'AntiCheatExpert'}
+ANTI_CHEAT_FRAGMENTS = {'easyanticheat': 'EasyAntiCheat', 'battleye': 'BattlEye', 'equ8': 'EQU8',
+                        'xigncode': 'XIGNCODE', 'anticheatexpert': 'AntiCheatExpert'}
+ANTI_CHEAT_SUFFIXES = ('.exe', '.dll', '.sys')
 
 
 def _error(message):
@@ -462,6 +480,20 @@ def _bootstrap_target(path):
     return actual.resolve()
 
 
+def _anti_cheat_label(name, *, folder):
+    """Vendor for a lowercase file or folder name, or None."""
+    if folder:
+        return ANTI_CHEAT_FOLDERS.get(name)
+    if not name.endswith(ANTI_CHEAT_SUFFIXES):
+        return None
+    if name in ANTI_CHEAT_BINARIES:
+        return ANTI_CHEAT_BINARIES[name]
+    for prefix, label in ANTI_CHEAT_PREFIXES.items():
+        if name.startswith(prefix):
+            return label
+    return next((label for fragment, label in ANTI_CHEAT_FRAGMENTS.items() if fragment in name), None)
+
+
 def inspect_game(exe):
     exe = Path(exe).expanduser().resolve()
     actual = _bootstrap_target(exe)
@@ -477,11 +509,6 @@ def inspect_game(exe):
         evidence_root = exe.parent.parent.parent.parent
     fsr, anti = [], set()
     dll_index = {}
-    signatures = {'easyanticheat': 'EasyAntiCheat', 'easy anti cheat': 'EasyAntiCheat',
-                  'battleye': 'BattlEye', 'beservice': 'BattlEye', 'beclient': 'BattlEye',
-                  'ricochet': 'Ricochet', 'randgrid': 'Ricochet', 'vgk': 'Vanguard',
-                  'vanguard': 'Vanguard', 'equ8': 'EQU8', 'faceit': 'FACEIT',
-                  'xigncode': 'XIGNCODE', 'nprotect': 'nProtect', 'anticheatexpert': 'AntiCheatExpert'}
     for p in _walk(evidence_root, game_tree=True):
         name = p.name.lower()
         # Backups and our own installed proxy must not prove game compatibility.
@@ -491,9 +518,9 @@ def inspect_game(exe):
             dll_index.setdefault(name, []).append(p)
         if any(s in name for s in ('fsr', 'fidelityfx', 'ffx_')):
             fsr.append(str(p))
-        for pattern, label in signatures.items():
-            if pattern in name:
-                anti.add(label)
+        label = _anti_cheat_label(name, folder=p.is_dir())
+        if label:
+            anti.add(label)
     # Follow imports, not every DLL found on disk. Unreal often stores imported
     # modules under Engine/ rather than beside the shipping executable.
     imports, loader_evidence, unresolved = set(), [], set()
@@ -543,9 +570,9 @@ def inspect_game(exe):
         low = name.lower()
         if any(s in low for s in ('fsr', 'fidelityfx', 'ffx_')):
             fsr.append('import: '+name)
-        for pattern, label in signatures.items():
-            if pattern in low:
-                anti.add(label)
+        label = _anti_cheat_label(low, folder=False)
+        if label:
+            anti.add(label)
     return dict(exe=exe, imports=imports, version_loader=bool(loader_evidence),
                 loader_evidence=loader_evidence, unresolved_dependencies=sorted(unresolved),
                 dx12=any(n == 'd3d12.dll' or n.startswith(('ffx_', 'amd_fidelityfx')) for n in lowered),

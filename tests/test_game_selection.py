@@ -141,5 +141,64 @@ class GameSelection(unittest.TestCase):
                     self.assertEqual(count, 1)
 
 
+class AntiCheatDetection(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix='dlssnr-anticheat-')
+        self.addCleanup(self.temporary.cleanup)
+
+    def evidence(self, *relatives, game='Cyberpunk 2077'):
+        """Anti-cheat labels for a fresh game tree holding the given files."""
+        root = Path(self.temporary.name) / game
+        exe = write_executable(root / 'bin/x64/Cyberpunk2077.exe')
+        for relative in relatives:
+            path = root / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.touch()
+        return games.inspect_game(exe)['anti_cheat_evidence']
+
+    def test_cyberpunk_ricochet_mod_and_redmod_scripts_are_not_anti_cheat(self):
+        # Ricochet is a gameplay mechanic in Cyberpunk: a CET mod folder and stock
+        # REDmod scripts carry the word without being Call of Duty's anti-cheat.
+        # The scripts ship under tools/, outside the scanned bin/x64, so copies of
+        # their names also sit inside it.
+        self.assertEqual(self.evidence(
+            'bin/x64/plugins/cyber_engine_tweaks/mods/RicochetRedux/init.lua',
+            'tools/redmod/scripts/cyberpunk/strike/executors/ricochet.script',
+            'tools/redmod/scripts/core/gameplay/prereqs/damage/hitIsRicochetPrereq.script',
+            'bin/x64/ricochet.script', 'bin/x64/hitIsRicochetPrereq.script'), [])
+
+    def test_gameplay_words_in_mod_binaries_and_folders_are_not_anti_cheat(self):
+        self.assertEqual(self.evidence(
+            'bin/x64/plugins/RicochetPhysics.dll', 'bin/x64/Vanguard Armor/vgkit.dll',
+            'bin/x64/plugins/faceit-stats-overlay.exe', 'bin/x64/BattlEye Mods/readme.txt',
+            'bin/x64/nprotect-notes/x.txt', 'bin/x64/plugins/youtubeclient.dll',
+            'bin/x64/plugins/cubeservice.exe', 'bin/x64/mods/statsguard64.dll',
+            'bin/x64/tools/interface-setup.exe'), [])
+
+    def test_vendor_binaries_and_folders_are_detected(self):
+        # Names as they appear inside shipped game folders. Binaries sit outside
+        # the vendor folders so each case proves one rule on its own.
+        cases = (('bin/x64/EasyAntiCheat/Settings.json', 'EasyAntiCheat'),
+                 ('bin/x64/EasyAntiCheat_EOS/Settings.json', 'EasyAntiCheat'),
+                 ('bin/x64/EasyAntiCheat_x64.dll', 'EasyAntiCheat'),
+                 ('bin/x64/EasyAntiCheat_EOS_Setup.exe', 'EasyAntiCheat'),
+                 ('bin/x64/start_protected_game.exe', 'EasyAntiCheat'),
+                 ('bin/x64/BattlEye/eula.txt', 'BattlEye'),
+                 ('bin/x64/BEClient_x64.dll', 'BattlEye'),
+                 ('bin/x64/BEService_x64.exe', 'BattlEye'),
+                 ('bin/x64/randgrid.sys', 'Ricochet'),
+                 ('bin/x64/anticheat.x64.equ8.exe', 'EQU8'),
+                 ('bin/x64/FACEIT_Start_Protected_Game.exe', 'FACEIT'),
+                 ('bin/x64/FACEITAC_Installer.exe', 'FACEIT'),
+                 ('bin/x64/XIGNCODE/xxd-0.xem', 'XIGNCODE'),
+                 ('bin/x64/GameGuard/GameMon.des', 'nProtect'),
+                 ('bin/x64/AntiCheatExpert/readme.txt', 'AntiCheatExpert'),
+                 ('bin/x64/ACE-Setup64.exe', 'AntiCheatExpert'),
+                 ('bin/x64/SGuard64.exe', 'AntiCheatExpert'),
+                 ('bin/x64/SGuardSvc64.exe', 'AntiCheatExpert'))
+        for index, (relative, label) in enumerate(cases):
+            with self.subTest(relative):
+                self.assertEqual(self.evidence(relative, game=f'Game {index}'), [label])
+
 if __name__ == '__main__':
     unittest.main()

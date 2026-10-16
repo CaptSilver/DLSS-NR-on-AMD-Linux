@@ -74,7 +74,7 @@
     "dlssnr/launch_support.py": "2db52b185efad59236944757ee17ae1b31a620f54a7b6fba2f2c918a35ef044f",
     "dlssnr/deploy.py": "6a240e2282755d59c927afd100b4632cd5257b4502723a87aded3c10d012d6c6",
     "dlssnr/legacy_converter.py": "916cef9117249215689f5b1f1057136cac0243f8bc462d87e8b17ae1960f98c5",
-    "dlssnr/games.py": "b7373b7d6ab5210aa989acdec42f99def5e3060edaaffccb5da4016272fd9890",
+    "dlssnr/games.py": "b44d3a70d7ff500535c0a4bad4d0fcb159eb3e969560b2459c2420ba3e3e1818",
     "dlssnr/runtime.py": "14ec4dadd3d0eb203a6ec4a5f4ba80df4d6aad70714dbbf0e2119e7b4b288021",
     "dlssnr/upstream.py": "4bf9a46745429ec12f2a31175d210f38e875c229040b40c0730fc8460ec8d6ad",
     "native/hip_bridge.c": "37a869f62d8b6e85c375c7ccb069ef2d5c15644567adde196f8d86e75a6017e9",
