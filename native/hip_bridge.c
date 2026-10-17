@@ -26,7 +26,7 @@ static DlssnrHipBridge g_bridge;
 static DlssnrHipBridge real;
 static void *g_hip;
 static int g_hip_ok;
-static FILE *g_log;
+static int g_log_fd = -1;
 static int g_nr_fds[16];
 static int g_nr_nfds;
 static unsigned g_wait_n;
@@ -63,23 +63,40 @@ void hip_log(const char *fmt, ...);
 #define logmsg hip_log
 typedef int (*wine_h2fd_t)(void *handle, unsigned int access, int *unix_fd, unsigned int *options);
 
+/* No stdio FILE and no lock: Wine can suspend a thread in the middle of a log
+ * call, and a FILE lock it held would then block every later caller. One
+ * O_APPEND write() per line keeps lines whole without any lock. */
 void hip_log(const char *fmt, ...) {
+    char line[1024];
     va_list ap;
-    if (!g_log) {
+    int fd = __atomic_load_n(&g_log_fd, __ATOMIC_ACQUIRE);
+    int n, m;
+
+    if (fd < 0) {
         const char *path = getenv("DLSSNR_HIP_LOG");
-        g_log = fopen(path && path[0] ? path : "/tmp/dlssnr-hip.log", "a");
-        if (g_log)
-            setvbuf(g_log, NULL, _IOLBF, 0);
+        int expected = -1;
+        fd = open(path && path[0] ? path : "/tmp/dlssnr-hip.log",
+                  O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, 0644);
+        if (fd < 0)
+            return;
+        if (!__atomic_compare_exchange_n(&g_log_fd, &expected, fd, 0, __ATOMIC_ACQ_REL,
+                                         __ATOMIC_ACQUIRE)) {
+            close(fd);
+            fd = expected;
+        }
     }
-    if (!g_log)
-        return;
-    flockfile(g_log);
-    fprintf(g_log, "[pid %d] ", (int)getpid());
+    n = snprintf(line, sizeof(line), "[pid %d] ", (int)getpid());
     va_start(ap, fmt);
-    vfprintf(g_log, fmt, ap);
+    m = vsnprintf(line + n, sizeof(line) - (size_t)n - 1, fmt, ap);
     va_end(ap);
-    fputc('\n', g_log);
-    funlockfile(g_log);
+    if (m < 0)
+        m = 0;
+    n += m;
+    if (n > (int)sizeof(line) - 2)
+        n = (int)sizeof(line) - 2;
+    line[n++] = '\n';
+    if (write(fd, line, (size_t)n) < 0)
+        return;
 }
 
 static void *must_dlsym(const char *name) {
