@@ -97,7 +97,7 @@ int main(void){
     g_hip_ok=1;real.p_hipDeviceGetStreamPriorityRange=range;
     real.p_hipStreamCreateWithPriority=create;real.p_hipStreamDestroy=destroy;
     int lo=0,hi=0;void *s=0;
-    assert(g_bridge.magic==0x374849504E524C44ULL);
+    assert(g_bridge.magic==0x384849504E524C44ULL);
     assert(g_bridge.p_hipDeviceGetStreamPriorityRange(&lo,&hi)==0 && lo==1 && hi==-1);
     assert(g_bridge.p_hipStreamCreateWithPriority(&s,1,-1)==0 && s==(void *)0x123456789ULL);
     assert(g_bridge.p_hipStreamDestroy(s)==0);

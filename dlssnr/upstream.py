@@ -41,8 +41,8 @@ HIP_IMPORTS = frozenset(('__hipPopCallConfiguration', '__hipPushCallConfiguratio
     'hipOccupancyMaxActiveBlocksPerMultiprocessor', 'hipRuntimeGetVersion', 'hipSetDevice', 'hipStreamCreateWithFlags',
     'hipStreamSynchronize', 'hipDeviceGetStreamPriorityRange', 'hipStreamCreateWithPriority', 'hipStreamDestroy',
     'hipHostMalloc', 'hipHostGetDevicePointer'))
-# External-semaphore calls. The bridge emulates D3D12 fence imports on DRM
-# timeline syncobjs because Linux ROCm cannot import them.
+# External-semaphore calls. The trampoline opens D3D12 fence imports itself
+# (handle type 4) because Linux ROCm cannot import them; other types go to HIP.
 HIP_FENCE_EXPORTS = frozenset(('hipImportExternalSemaphore', 'hipDestroyExternalSemaphore',
     'hipWaitExternalSemaphoresAsync', 'hipSignalExternalSemaphoresAsync'))
 # Exports the trampoline offers beyond what the upstream runtime imports: the

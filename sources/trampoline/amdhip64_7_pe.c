@@ -542,30 +542,84 @@ EXPORT int hipModuleUnload(void *module) {
     return result;
 }
 
-/* External semaphores. The bridge turns D3D12 fence imports (type 4) into DRM
- * timeline syncobjs; the descriptor, handle arrays and parameter blocks are
+/* External semaphores. D3D12 fence imports (type 4) are opened here, on the PE
+ * side, with a worker thread per fence; every other handle type goes to HIP
+ * through the bridge. The descriptor, handle arrays and parameter blocks are
  * in-process memory and cross unchanged. */
+#include "pe_fence.c"
+
+/* hipExternalSemaphoreHandleDesc: int type at 0, the handle union at +8. */
+struct pe_sem_desc {
+    int type;
+    int pad;
+    void *handle;
+};
+
 EXPORT int hipImportExternalSemaphore(void **extSem, const void *semHandleDesc) {
-    if (!bridge_ok() || !g->p_hipImportExternalSemaphore) return HIP_ERROR_NOT_INITIALIZED;
-    return ((int SYSV (*)(void **, const void *))g->p_hipImportExternalSemaphore)(extSem,
-                                                                                semHandleDesc);
+    const struct pe_sem_desc *d = semHandleDesc;
+    if (!bridge_ok() || !g->p_hipImportExternalSemaphore)
+        return HIP_ERROR_NOT_INITIALIZED;
+    if (!extSem || !d)
+        return HIP_ERROR_INVALID_VALUE;
+    if (d->type == FENCE_D3D12_TYPE)
+        return pe_fence_import(extSem, d->handle);
+    return ((int SYSV (*)(void **, const void *))g->p_hipImportExternalSemaphore)(extSem, semHandleDesc);
 }
 
 EXPORT int hipDestroyExternalSemaphore(void *extSem) {
-    if (!bridge_ok() || !g->p_hipDestroyExternalSemaphore) return HIP_ERROR_NOT_INITIALIZED;
+    struct pe_fence *f;
+    if (!bridge_ok() || !g->p_hipDestroyExternalSemaphore)
+        return HIP_ERROR_NOT_INITIALIZED;
+    f = pe_fence_lookup(extSem);
+    if (f)
+        return pe_fence_destroy(f);
     return ((int SYSV (*)(void *))g->p_hipDestroyExternalSemaphore)(extSem);
+}
+
+/* Wait and signal share one walk. Without a live PE fence the whole call goes
+ * to HIP unchanged, arrays and count intact, and is never read here. With one,
+ * each element is either ours (the value is the first u64 of its parameter
+ * block) or goes to HIP alone with its own block. The first error is returned
+ * but every element is attempted. */
+typedef int(SYSV *pe_forward_t)(const void *sems, const void *params, unsigned n, void *stream);
+
+static int pe_fence_each(const void *sems, const void *params, unsigned n, void *stream, int is_wait) {
+    void *const *list = sems;
+    pe_forward_t forward =
+        (pe_forward_t)(is_wait ? g->p_hipWaitExternalSemaphoresAsync : g->p_hipSignalExternalSemaphoresAsync);
+    int first = 0;
+    unsigned i;
+
+    if (!pe_fences_any_live())
+        return forward(sems, params, n, stream);
+    if (n && (!sems || !params))
+        return HIP_ERROR_INVALID_VALUE;
+    for (i = 0; i < n; i++) {
+        const char *param = (const char *)params + (unsigned long long)i * FENCE_PARAMS_SIZE;
+        struct pe_fence *f = pe_fence_lookup(list[i]);
+        int err;
+        if (f) {
+            u64 v = *(const u64 *)param;
+            err = is_wait ? pe_fence_wait(f, v, stream) : pe_fence_signal(f, v, stream);
+        } else {
+            err = forward(&list[i], param, 1, stream);
+        }
+        if (err && !first)
+            first = err;
+    }
+    return first;
 }
 
 EXPORT int hipWaitExternalSemaphoresAsync(const void *extSemArray, const void *paramsArray,
                                           unsigned int numExtSems, void *stream) {
-    if (!bridge_ok() || !g->p_hipWaitExternalSemaphoresAsync) return HIP_ERROR_NOT_INITIALIZED;
-    return ((int SYSV (*)(const void *, const void *, unsigned int, void *))
-                g->p_hipWaitExternalSemaphoresAsync)(extSemArray, paramsArray, numExtSems, stream);
+    if (!bridge_ok() || !g->p_hipWaitExternalSemaphoresAsync)
+        return HIP_ERROR_NOT_INITIALIZED;
+    return pe_fence_each(extSemArray, paramsArray, numExtSems, stream, 1);
 }
 
 EXPORT int hipSignalExternalSemaphoresAsync(const void *extSemArray, const void *paramsArray,
                                             unsigned int numExtSems, void *stream) {
-    if (!bridge_ok() || !g->p_hipSignalExternalSemaphoresAsync) return HIP_ERROR_NOT_INITIALIZED;
-    return ((int SYSV (*)(const void *, const void *, unsigned int, void *))
-                g->p_hipSignalExternalSemaphoresAsync)(extSemArray, paramsArray, numExtSems, stream);
+    if (!bridge_ok() || !g->p_hipSignalExternalSemaphoresAsync)
+        return HIP_ERROR_NOT_INITIALIZED;
+    return pe_fence_each(extSemArray, paramsArray, numExtSems, stream, 0);
 }

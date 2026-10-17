@@ -8,3 +8,11 @@ ReadFile
 GetFileSize
 VirtualAlloc
 VirtualFree
+CreateThread
+CreateEventA
+SetEvent
+WaitForMultipleObjects
+LoadLibraryA
+GetProcAddress
+GetModuleHandleExA
+Sleep

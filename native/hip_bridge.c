@@ -21,7 +21,7 @@
 #include <errno.h>
 
 /* Keep stubs in g_bridge forever. Real HIP lives in `real`. */
-const char dlssnr_hip_abi_marker[] = "DLSSNR_HIP_ABI_V7";
+const char dlssnr_hip_abi_marker[] = "DLSSNR_HIP_ABI_V8";
 static DlssnrHipBridge g_bridge;
 static DlssnrHipBridge real;
 static void *g_hip;
@@ -37,10 +37,9 @@ static void *g_k_import;
 static void *g_k_expo_resolve;
 static void *g_done_event;
 static int (*p_hipStreamSynchronize)(void *stream);
-/* Fence emulation (fence_emu.c) needs these three beyond the forwarded table. */
+/* The fence counter half (fence_emu.c) needs these two beyond the forwarded table. */
 static int (*p_hipStreamWaitValue64)(void *stream, void *ptr, u64 value, unsigned flags, u64 mask);
 static int (*p_hipLaunchHostFunc)(void *stream, void (*fn)(void *), void *user);
-static int (*p_hipDeviceGetPCIBusId)(char *pci, int len, int device);
 static void *g_hip_sem;
 static unsigned long long g_nr_seq;
 static int g_sem_ok;
@@ -418,7 +417,6 @@ static int ensure_hip(void) {
     real.p_hipSignalExternalSemaphoresAsync = must_dlsym("hipSignalExternalSemaphoresAsync");
     p_hipStreamWaitValue64 = must_dlsym("hipStreamWaitValue64");
     p_hipLaunchHostFunc = must_dlsym("hipLaunchHostFunc");
-    p_hipDeviceGetPCIBusId = must_dlsym("hipDeviceGetPCIBusId");
     g_hip_ok = 1;
     if (real.p_hipEventCreate)
         real.p_hipEventCreate(&g_done_event);
@@ -476,8 +474,6 @@ typedef d3dkmt_handle_t (*d3dkmt_open_resource_t)(d3dkmt_handle_t global, void *
                                                   d3dkmt_handle_t *mutex_local, d3dkmt_handle_t *sync_local);
 typedef int (*d3dkmt_object_get_fd_t)(d3dkmt_handle_t local);
 typedef int (*d3dkmt_destroy_resource_t)(d3dkmt_handle_t local);
-typedef d3dkmt_handle_t (*d3dkmt_open_sync_t)(d3dkmt_handle_t global, void *shared);
-typedef int (*d3dkmt_destroy_sync_t)(d3dkmt_handle_t local);
 
 static void *elf_local_sym(void *handle, const char *name) {
     struct link_map *lm = NULL;
@@ -653,7 +649,6 @@ static int import_native(void **out, const struct pe_extmem_desc *in) {
 
 #include "fence_emu.c"
 
-/* Wine fence fd is a DRM syncobj, not a HIP timeline. Signal it ourselves. */
 #ifdef DLSSNR_ACTIVE_C32
 #include "active_c32.c"
 #else
@@ -1134,6 +1129,13 @@ __attribute__((constructor)) static void dlssnr_hip_init(void) {
     g_bridge.p_hipDestroyExternalSemaphore = stub_desem;
     g_bridge.p_hipWaitExternalSemaphoresAsync = stub_waitsem;
     g_bridge.p_hipSignalExternalSemaphoresAsync = stub_signalsem;
+    g_bridge.p_dlssnr_fence_create = fence_create;
+    g_bridge.p_dlssnr_fence_wait = fence_wait;
+    g_bridge.p_dlssnr_fence_signal = fence_signal;
+    g_bridge.p_dlssnr_fence_drain = fence_drain;
+    g_bridge.p_dlssnr_fence_release = fence_release;
+    g_bridge.p_dlssnr_log = bridge_pe_log;
+    g_bridge.p_dlssnr_fence_await_ready = fence_await_ready;
     g_bridge.p_hipStreamSynchronize = stub_streamsync;
     g_bridge.p_hipEventRecord = stub_evrec;
     g_bridge.p_hipEventSynchronize = stub_evsync;

@@ -26,7 +26,7 @@ PACKAGE_FILES = (
     'sources/README.md', 'sources/fetch_vkd3d.py', 'sources/cross-win64.ini',
     'sources/vkd3d-submodules.json', 'sources/vkd3d-proton-ordered.patch',
     'sources/vkd3d-proton-shared-buffers.patch',
-    'sources/trampoline/amdhip64_7_pe.c', 'sources/trampoline/hip_bridge.h',
+    'sources/trampoline/amdhip64_7_pe.c', 'sources/trampoline/pe_fence.c', 'sources/trampoline/hip_bridge.h',
     'sources/trampoline/kernel32.def', 'sources/trampoline/ntdll.def',
     'scripts/build-components.sh', 'scripts/fetch-toolchain.py',
     'licenses/PROJECT-MIT.txt', 'licenses/vkd3d-proton-LICENSE',
@@ -58,7 +58,7 @@ def validate_components(root):
     if (bridge[:5] != b'\x7fELF\x02' or len(bridge) < 64
             or struct.unpack_from('<H', bridge, 18)[0] != 62
             or b'DLSSNR_ORDERED_ABI_V3' not in bridge
-            or b'DLSSNR_HIP_ABI_V7' not in bridge):
+            or b'DLSSNR_HIP_ABI_V8' not in bridge):
         raise ValueError('Missing x86_64 ordered HIP bridge')
     if b'NR: cannot establish producer/consumer boundary' not in content['d3d12core.dll']:
         raise ValueError('D3D12 core lacks the ordered integration patch')

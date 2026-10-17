@@ -2,7 +2,7 @@
 #ifndef DLSSNR_HIP_BRIDGE_H
 #define DLSSNR_HIP_BRIDGE_H
 
-#define DLSSNR_HIP_MAGIC 0x374849504E524C44ULL /* "DLNRHIP7"; incompatible tables are rejected */
+#define DLSSNR_HIP_MAGIC 0x384849504E524C44ULL /* "DLNRHIP8"; incompatible tables are rejected */
 #define DLSSNR_HIP_ENV "DLSSNR_HIP_BRIDGE"
 #define DLSSNR_HIP_ADDR_FILE "/tmp/dlssnr_hip_bridge.addr"
 
@@ -12,6 +12,19 @@ typedef unsigned long long u64;
 typedef struct {
     u32 x, y, z;
 } dim3_t;
+
+#define DLSSNR_FENCE_SHARED_MAGIC 0x44485346u /* "FSHD" */
+
+/* Bridge-owned half of an imported D3D12 fence. The PE worker reads counter and
+ * signal_ready; ROCm's host-callback thread writes signal_ready; both use atomics
+ * only. The bridge frees it when the import and every queued callback are done. */
+typedef struct {
+    u32 magic;
+    u32 refs;                  /* bridge-private */
+    volatile u64 *counter;     /* host-mapped: a stream blocks until *counter >= value */
+    void *counter_dev;         /* the same page as the GPU sees it */
+    volatile u64 signal_ready; /* highest value whose stream work has finished */
+} DlssnrFenceShared;
 
 typedef struct {
     u64 magic;
@@ -96,15 +109,30 @@ typedef struct {
                                       void **kernelParams, void **extra, void *startEvent,
                                       void *stopEvent, unsigned int flags);
     int (*p_hipDeviceGetName)(char *name, int len, int device);
-    /* ABI 7: external semaphores. The bridge emulates D3D12 fence imports
-     * (handle type 4) on DRM timeline syncobjs and passes every other type to
-     * HIP. Arrays and descriptors are in-process pointers and cross unchanged. */
+    /* ABI 7: external semaphores. Every handle type goes to HIP through these
+     * four slots unchanged; D3D12 fences (type 4) never reach them, see ABI 8.
+     * Arrays and descriptors are in-process pointers and cross unchanged. */
     int (*p_hipImportExternalSemaphore)(void **extSem_out, const void *semHandleDesc);
     int (*p_hipDestroyExternalSemaphore)(void *extSem);
     int (*p_hipWaitExternalSemaphoresAsync)(const void *extSemArray, const void *paramsArray,
                                             unsigned int numExtSems, void *stream);
     int (*p_hipSignalExternalSemaphoresAsync)(const void *extSemArray, const void *paramsArray,
                                               unsigned int numExtSems, void *stream);
+    /* ABI 8: D3D12 fences (handle type 4) are opened on the PE side, which owns
+     * the ID3D12Fence and a worker thread. The bridge keeps the half that needs
+     * HIP: the host-mapped counter a stream blocks on and the host callback
+     * that reports finished stream work. */
+    int (*p_dlssnr_fence_create)(DlssnrFenceShared **out);
+    int (*p_dlssnr_fence_wait)(DlssnrFenceShared *f, void *stream, u64 value);
+    int (*p_dlssnr_fence_signal)(DlssnrFenceShared *f, void *stream, u64 value);
+    int (*p_dlssnr_fence_drain)(DlssnrFenceShared *f);          /* 0 idle, 600 still busy */
+    int (*p_dlssnr_fence_release)(DlssnrFenceShared *f, int drained);
+    /* PE-side lines for hip.log. fmt uses only %llu / %llx and consumes a, b, c. */
+    void (*p_dlssnr_log)(const char *fmt, u64 a, u64 b, u64 c);
+    /* Sleeps until signal_ready exceeds `after` or timeout_ms passes: 0 when it
+     * does, 600 on timeout. The PE side's signal relay thread lives in this
+     * call; the ROCm callback that raises signal_ready wakes it. */
+    int (*p_dlssnr_fence_await_ready)(DlssnrFenceShared *f, u64 after, u32 timeout_ms);
 } DlssnrHipBridge;
 
 #endif

@@ -127,7 +127,7 @@ int main(void) {
     t.p_hipMemcpy2DAsync = f_cpy2d; t.p_hipExtModuleLaunchKernel = f_extlaunch;
     t.p_hipDeviceGetName = f_devname;
 
-    t.magic = 0x364849504E524C44ULL; /* previous table revision */
+    t.magic = 0x374849504E524C44ULL; /* previous table revision */
     assert(hipInit(5) == 3 && hipHostFree((void *)0x3333) == 3 && hipStreamQuery((void *)0x8888) == 3);
     assert(!strcmp(hipGetErrorName(701), "hip bridge not initialized") && !calls);
 
@@ -278,7 +278,7 @@ int main(void) {
     real.p_hipModuleUnload = r_unload; real.p_hipStreamQuery = r_query;
     real.p_hipMemcpy2DAsync = r_cpy2d; real.p_hipExtModuleLaunchKernel = r_ext;
     real.p_hipDeviceGetName = r_devname;
-    assert(g_bridge.magic == 0x374849504E524C44ULL);
+    assert(g_bridge.magic == 0x384849504E524C44ULL);
     u64 fr = 0, tot = 0; void *h = 0, *fn = 0; char name[16] = {0};
     for (result = 0; result <= 719; result += 719) {
         calls = 0;
