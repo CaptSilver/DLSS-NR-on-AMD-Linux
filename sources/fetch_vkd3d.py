@@ -21,9 +21,12 @@ def main():
         parser.error('destination must not exist (no existing checkout is modified)')
     sources = Path(__file__).resolve().parent
     provenance = json.loads((sources.parent / 'PROVENANCE.json').read_text())
-    patch = sources / 'vkd3d-proton-ordered.patch'
-    if hashlib.sha256(patch.read_bytes()).hexdigest() != provenance['vkd3d']['patch_sha256']:
-        parser.error('patch checksum mismatch')
+    # Applied in this order; the second patch is built on the tree the first leaves.
+    patches = [(sources / 'vkd3d-proton-ordered.patch', provenance['vkd3d']['patch_sha256']),
+               (sources / 'vkd3d-proton-shared-buffers.patch', provenance['vkd3d']['shared_buffers_patch_sha256'])]
+    for patch, digest in patches:
+        if hashlib.sha256(patch.read_bytes()).hexdigest() != digest:
+            parser.error('patch checksum mismatch: ' + patch.name)
     subprocess.run(['git', 'clone', '--no-checkout', URL, str(target)], check=True)
     def git(*args):
         return subprocess.check_output(['git', '-C', str(target), *args], text=True)
@@ -36,8 +39,9 @@ def main():
                                        'rev-parse', 'HEAD'], text=True).strip()
         if sha != entry['commit']:
             raise RuntimeError('wrong submodule commit: ' + entry['path'])
-    git('apply', '--check', str(patch))
-    git('apply', str(patch))
+    for patch, _ in patches:
+        git('apply', '--check', str(patch))
+        git('apply', str(patch))
     print('Corresponding source ready:', target)
     print('No binaries built or executed.')
 

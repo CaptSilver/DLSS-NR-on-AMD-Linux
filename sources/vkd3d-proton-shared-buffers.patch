@@ -1,0 +1,15 @@
+diff --git a/libs/vkd3d/resource.c b/libs/vkd3d/resource.c
+--- a/libs/vkd3d/resource.c
++++ b/libs/vkd3d/resource.c
+@@ -4557,6 +4557,11 @@
+ 
+         object->res.vk_buffer = object->mem.resource.vk_buffer;
+         object->res.va = object->mem.resource.va;
++
++        /* Shared buffers are not suballocated and export OPAQUE_WIN32 like shared images.
++         * Without a D3DKMT local resource, CreateSharedHandle has nothing to share. */
++        if (heap_flags & D3D12_HEAP_FLAG_SHARED)
++            d3d12_resource_open_export_kmt(object, device, &object->mem);
+     }
+ 
+     object->priority.allows_dynamic_residency = 

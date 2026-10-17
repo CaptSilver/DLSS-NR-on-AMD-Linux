@@ -25,6 +25,7 @@ PACKAGE_FILES = (
     'native/c32_prepack.c', 'native/c32_offsets.inc', 'native/active_c32.c',
     'sources/README.md', 'sources/fetch_vkd3d.py', 'sources/cross-win64.ini',
     'sources/vkd3d-submodules.json', 'sources/vkd3d-proton-ordered.patch',
+    'sources/vkd3d-proton-shared-buffers.patch',
     'sources/trampoline/amdhip64_7_pe.c', 'sources/trampoline/hip_bridge.h',
     'sources/trampoline/kernel32.def', 'sources/trampoline/ntdll.def',
     'scripts/build-components.sh', 'scripts/fetch-toolchain.py',
