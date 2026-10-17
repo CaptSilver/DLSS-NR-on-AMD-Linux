@@ -541,3 +541,31 @@ EXPORT int hipModuleUnload(void *module) {
         VirtualFree(image, 0, MEM_RELEASE);
     return result;
 }
+
+/* External semaphores. The bridge turns D3D12 fence imports (type 4) into DRM
+ * timeline syncobjs; the descriptor, handle arrays and parameter blocks are
+ * in-process memory and cross unchanged. */
+EXPORT int hipImportExternalSemaphore(void **extSem, const void *semHandleDesc) {
+    if (!bridge_ok() || !g->p_hipImportExternalSemaphore) return HIP_ERROR_NOT_INITIALIZED;
+    return ((int SYSV (*)(void **, const void *))g->p_hipImportExternalSemaphore)(extSem,
+                                                                                semHandleDesc);
+}
+
+EXPORT int hipDestroyExternalSemaphore(void *extSem) {
+    if (!bridge_ok() || !g->p_hipDestroyExternalSemaphore) return HIP_ERROR_NOT_INITIALIZED;
+    return ((int SYSV (*)(void *))g->p_hipDestroyExternalSemaphore)(extSem);
+}
+
+EXPORT int hipWaitExternalSemaphoresAsync(const void *extSemArray, const void *paramsArray,
+                                          unsigned int numExtSems, void *stream) {
+    if (!bridge_ok() || !g->p_hipWaitExternalSemaphoresAsync) return HIP_ERROR_NOT_INITIALIZED;
+    return ((int SYSV (*)(const void *, const void *, unsigned int, void *))
+                g->p_hipWaitExternalSemaphoresAsync)(extSemArray, paramsArray, numExtSems, stream);
+}
+
+EXPORT int hipSignalExternalSemaphoresAsync(const void *extSemArray, const void *paramsArray,
+                                            unsigned int numExtSems, void *stream) {
+    if (!bridge_ok() || !g->p_hipSignalExternalSemaphoresAsync) return HIP_ERROR_NOT_INITIALIZED;
+    return ((int SYSV (*)(const void *, const void *, unsigned int, void *))
+                g->p_hipSignalExternalSemaphoresAsync)(extSemArray, paramsArray, numExtSems, stream);
+}

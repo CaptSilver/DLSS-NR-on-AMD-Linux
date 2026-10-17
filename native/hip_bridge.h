@@ -2,7 +2,7 @@
 #ifndef DLSSNR_HIP_BRIDGE_H
 #define DLSSNR_HIP_BRIDGE_H
 
-#define DLSSNR_HIP_MAGIC 0x364849504E524C44ULL /* "DLNRHIP6"; incompatible tables are rejected */
+#define DLSSNR_HIP_MAGIC 0x374849504E524C44ULL /* "DLNRHIP7"; incompatible tables are rejected */
 #define DLSSNR_HIP_ENV "DLSSNR_HIP_BRIDGE"
 #define DLSSNR_HIP_ADDR_FILE "/tmp/dlssnr_hip_bridge.addr"
 
@@ -96,6 +96,15 @@ typedef struct {
                                       void **kernelParams, void **extra, void *startEvent,
                                       void *stopEvent, unsigned int flags);
     int (*p_hipDeviceGetName)(char *name, int len, int device);
+    /* ABI 7: external semaphores. The bridge emulates D3D12 fence imports
+     * (handle type 4) on DRM timeline syncobjs and passes every other type to
+     * HIP. Arrays and descriptors are in-process pointers and cross unchanged. */
+    int (*p_hipImportExternalSemaphore)(void **extSem_out, const void *semHandleDesc);
+    int (*p_hipDestroyExternalSemaphore)(void *extSem);
+    int (*p_hipWaitExternalSemaphoresAsync)(const void *extSemArray, const void *paramsArray,
+                                            unsigned int numExtSems, void *stream);
+    int (*p_hipSignalExternalSemaphoresAsync)(const void *extSemArray, const void *paramsArray,
+                                              unsigned int numExtSems, void *stream);
 } DlssnrHipBridge;
 
 #endif

@@ -41,9 +41,13 @@ HIP_IMPORTS = frozenset(('__hipPopCallConfiguration', '__hipPushCallConfiguratio
     'hipOccupancyMaxActiveBlocksPerMultiprocessor', 'hipRuntimeGetVersion', 'hipSetDevice', 'hipStreamCreateWithFlags',
     'hipStreamSynchronize', 'hipDeviceGetStreamPriorityRange', 'hipStreamCreateWithPriority', 'hipStreamDestroy',
     'hipHostMalloc', 'hipHostGetDevicePointer'))
+# External-semaphore calls. The bridge emulates D3D12 fence imports on DRM
+# timeline syncobjs because Linux ROCm cannot import them.
+HIP_FENCE_EXPORTS = frozenset(('hipImportExternalSemaphore', 'hipDestroyExternalSemaphore',
+    'hipWaitExternalSemaphoresAsync', 'hipSignalExternalSemaphoresAsync'))
 # Exports the trampoline offers beyond what the upstream runtime imports: the
 # module API and the calls around it, for runtimes that use them.
-HIP_EXTRA_EXPORTS = frozenset(('hipInit', 'hipMemGetInfo', 'hipEventDestroy', 'hipGetErrorName',
+HIP_EXTRA_EXPORTS = HIP_FENCE_EXPORTS | frozenset(('hipInit', 'hipMemGetInfo', 'hipEventDestroy', 'hipGetErrorName',
     'hipStreamCreate', 'hipHostFree', 'hipModuleLoadData', 'hipModuleLoad', 'hipModuleGetFunction',
     'hipModuleLaunchKernel', 'hipModuleUnload', 'hipStreamQuery', 'hipMemcpy2DAsync',
     'hipExtModuleLaunchKernel', 'hipDeviceGetName'))

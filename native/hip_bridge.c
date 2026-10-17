@@ -1,6 +1,7 @@
 #define _GNU_SOURCE
 #include "hip_bridge.h"
 
+#include <dirent.h>
 #include <dlfcn.h>
 #include <elf.h>
 #include <fcntl.h>
@@ -11,6 +12,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <strings.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -19,7 +21,7 @@
 #include <errno.h>
 
 /* Keep stubs in g_bridge forever. Real HIP lives in `real`. */
-const char dlssnr_hip_abi_marker[] = "DLSSNR_HIP_ABI_V6";
+const char dlssnr_hip_abi_marker[] = "DLSSNR_HIP_ABI_V7";
 static DlssnrHipBridge g_bridge;
 static DlssnrHipBridge real;
 static void *g_hip;
@@ -35,8 +37,10 @@ static void *g_k_import;
 static void *g_k_expo_resolve;
 static void *g_done_event;
 static int (*p_hipStreamSynchronize)(void *stream);
-static int (*p_hipImportExternalSemaphore)(void **out, const void *desc);
-static int (*p_hipSignalExternalSemaphoresAsync)(const void *sems, const void *params, unsigned n, void *stream);
+/* Fence emulation (fence_emu.c) needs these three beyond the forwarded table. */
+static int (*p_hipStreamWaitValue64)(void *stream, void *ptr, u64 value, unsigned flags, u64 mask);
+static int (*p_hipLaunchHostFunc)(void *stream, void (*fn)(void *), void *user);
+static int (*p_hipDeviceGetPCIBusId)(char *pci, int len, int device);
 static void *g_hip_sem;
 static unsigned long long g_nr_seq;
 static int g_sem_ok;
@@ -359,9 +363,6 @@ static int ensure_hip(void) {
     real.p_hipExternalMemoryGetMappedBuffer = must_dlsym("hipExternalMemoryGetMappedBuffer");
     real.p_hipDestroyExternalMemory = must_dlsym("hipDestroyExternalMemory");
     p_hipStreamSynchronize = (int (*)(void *))must_dlsym("hipStreamSynchronize");
-    p_hipImportExternalSemaphore = (int (*)(void **, const void *))must_dlsym("hipImportExternalSemaphore");
-    p_hipSignalExternalSemaphoresAsync =
-        (int (*)(const void *, const void *, unsigned, void *))must_dlsym("hipSignalExternalSemaphoresAsync");
     real.p_hipGetDevice = must_dlsym("hipGetDevice");
     real.p_hipOccupancyMaxActiveBlocksPerMultiprocessor =
         must_dlsym("hipOccupancyMaxActiveBlocksPerMultiprocessor");
@@ -393,6 +394,14 @@ static int ensure_hip(void) {
     real.p_hipMemcpy2DAsync = must_dlsym("hipMemcpy2DAsync");
     real.p_hipExtModuleLaunchKernel = must_dlsym("hipExtModuleLaunchKernel");
     real.p_hipDeviceGetName = must_dlsym("hipDeviceGetName");
+    /* External semaphores. A missing call only affects semaphore use. */
+    real.p_hipImportExternalSemaphore = must_dlsym("hipImportExternalSemaphore");
+    real.p_hipDestroyExternalSemaphore = must_dlsym("hipDestroyExternalSemaphore");
+    real.p_hipWaitExternalSemaphoresAsync = must_dlsym("hipWaitExternalSemaphoresAsync");
+    real.p_hipSignalExternalSemaphoresAsync = must_dlsym("hipSignalExternalSemaphoresAsync");
+    p_hipStreamWaitValue64 = must_dlsym("hipStreamWaitValue64");
+    p_hipLaunchHostFunc = must_dlsym("hipLaunchHostFunc");
+    p_hipDeviceGetPCIBusId = must_dlsym("hipDeviceGetPCIBusId");
     g_hip_ok = 1;
     if (real.p_hipEventCreate)
         real.p_hipEventCreate(&g_done_event);
@@ -450,7 +459,7 @@ typedef d3dkmt_handle_t (*d3dkmt_open_resource_t)(d3dkmt_handle_t global, void *
                                                   d3dkmt_handle_t *mutex_local, d3dkmt_handle_t *sync_local);
 typedef int (*d3dkmt_object_get_fd_t)(d3dkmt_handle_t local);
 typedef int (*d3dkmt_destroy_resource_t)(d3dkmt_handle_t local);
-typedef d3dkmt_handle_t (*d3dkmt_open_sync_t)(d3dkmt_handle_t device, void *nt);
+typedef d3dkmt_handle_t (*d3dkmt_open_sync_t)(d3dkmt_handle_t global, void *shared);
 typedef int (*d3dkmt_destroy_sync_t)(d3dkmt_handle_t local);
 
 static void *elf_local_sym(void *handle, const char *name) {
@@ -624,6 +633,8 @@ static int import_native(void **out, const struct pe_extmem_desc *in) {
     }
     return import_from_fd(out, in, unix_fd, "nt-handle");
 }
+
+#include "fence_emu.c"
 
 /* Wine fence fd is a DRM syncobj, not a HIP timeline. Signal it ourselves. */
 #ifdef DLSSNR_ACTIVE_C32
@@ -1102,6 +1113,10 @@ __attribute__((constructor)) static void dlssnr_hip_init(void) {
     g_bridge.p_hipMemcpy2DAsync = stub_memcpy2d_async;
     g_bridge.p_hipExtModuleLaunchKernel = stub_extlaunch;
     g_bridge.p_hipDeviceGetName = stub_devname;
+    g_bridge.p_hipImportExternalSemaphore = stub_impsem;
+    g_bridge.p_hipDestroyExternalSemaphore = stub_desem;
+    g_bridge.p_hipWaitExternalSemaphoresAsync = stub_waitsem;
+    g_bridge.p_hipSignalExternalSemaphoresAsync = stub_signalsem;
     g_bridge.p_hipStreamSynchronize = stub_streamsync;
     g_bridge.p_hipEventRecord = stub_evrec;
     g_bridge.p_hipEventSynchronize = stub_evsync;

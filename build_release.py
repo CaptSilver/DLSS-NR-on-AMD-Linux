@@ -21,7 +21,7 @@ PACKAGE_FILES = (
     'docs/games/cyberpunk-2077.md', 'docs/games/007-first-light.md', 'docs/games/atomic-heart.md',
     'dlssnr/assets.py', 'dlssnr/cli.py', 'dlssnr/conversion.py', 'dlssnr/lmxxf.py', 'dlssnr/numpy-wheels.json',
     'dlssnr/launch_support.py', 'dlssnr/deploy.py', 'dlssnr/legacy_converter.py', 'dlssnr/games.py', 'dlssnr/runtime.py', 'dlssnr/upstream.py',
-    'native/hip_bridge.c', 'native/hip_bridge.h', 'native/nr_ordered.c', 'native/nr_ordered.h',
+    'native/hip_bridge.c', 'native/hip_bridge.h', 'native/fence_emu.c', 'native/nr_ordered.c', 'native/nr_ordered.h',
     'native/c32_prepack.c', 'native/c32_offsets.inc', 'native/active_c32.c',
     'sources/README.md', 'sources/fetch_vkd3d.py', 'sources/cross-win64.ini',
     'sources/vkd3d-submodules.json', 'sources/vkd3d-proton-ordered.patch',
@@ -57,7 +57,7 @@ def validate_components(root):
     if (bridge[:5] != b'\x7fELF\x02' or len(bridge) < 64
             or struct.unpack_from('<H', bridge, 18)[0] != 62
             or b'DLSSNR_ORDERED_ABI_V3' not in bridge
-            or b'DLSSNR_HIP_ABI_V6' not in bridge):
+            or b'DLSSNR_HIP_ABI_V7' not in bridge):
         raise ValueError('Missing x86_64 ordered HIP bridge')
     if b'NR: cannot establish producer/consumer boundary' not in content['d3d12core.dll']:
         raise ValueError('D3D12 core lacks the ordered integration patch')

@@ -46,7 +46,7 @@ static int SYSV host_devptr(void **dev, void *host, unsigned flags) {
 int main(void) {
     DlssnrHipBridge t = {0}; g = &t; void *out = 0, *dev = 0;
     t.p_hipHostMalloc = host_malloc; t.p_hipHostGetDevicePointer = host_devptr;
-    t.magic = 0x354849504E524C44ULL; /* previous table revision */
+    t.magic = 0x364849504E524C44ULL; /* previous table revision */
     assert(hipHostMalloc(&out, 0x123456789ULL, 0x80000003u) == 3 && !out);
     assert(hipHostGetDevicePointer(&dev, (void *)0x7f0000001000ULL, 0) == 3 && !dev && !called);
     t.magic = DLSSNR_HIP_MAGIC;
@@ -82,7 +82,7 @@ static int host_devptr(void **d, void *h, unsigned flags) {
 int main(void) {
     g_hip_ok = 1; real.p_hipHostMalloc = host_malloc; real.p_hipHostGetDevicePointer = host_devptr;
     void *p = 0, *d = 0;
-    assert(g_bridge.magic == 0x364849504E524C44ULL);
+    assert(g_bridge.magic == 0x374849504E524C44ULL);
     assert(g_bridge.p_hipHostMalloc && g_bridge.p_hipHostGetDevicePointer);
     assert(g_bridge.p_hipHostMalloc(&p, 4096, 2) == 0 && p == (void *)0x7f0000001000ULL);
     assert(g_bridge.p_hipHostGetDevicePointer(&d, p, 0) == 0 && d == (void *)0x7e0000002000ULL);
