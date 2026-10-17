@@ -4,3 +4,7 @@ GetEnvironmentVariableA
 CreateFileA
 WriteFile
 CloseHandle
+ReadFile
+GetFileSize
+VirtualAlloc
+VirtualFree

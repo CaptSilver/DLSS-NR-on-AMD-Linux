@@ -2,7 +2,7 @@
 #ifndef DLSSNR_HIP_BRIDGE_H
 #define DLSSNR_HIP_BRIDGE_H
 
-#define DLSSNR_HIP_MAGIC 0x354849504E524C44ULL /* "DLNRHIP5"; incompatible tables are rejected */
+#define DLSSNR_HIP_MAGIC 0x364849504E524C44ULL /* "DLNRHIP6"; incompatible tables are rejected */
 #define DLSSNR_HIP_ENV "DLSSNR_HIP_BRIDGE"
 #define DLSSNR_HIP_ADDR_FILE "/tmp/dlssnr_hip_bridge.addr"
 
@@ -70,6 +70,32 @@ typedef struct {
      * unchanged to HIP. */
     int (*p_hipHostMalloc)(void **ptr, u64 size, unsigned int flags);
     int (*p_hipHostGetDevicePointer)(void **devPtr, void *hstPtr, unsigned int flags);
+    /* ABI 6: module-API runtimes and the calls around them. hipModuleLoad has
+     * no slot: the PE side reads the file and uses hipModuleLoadData. Pointers
+     * (kernelParams, extra, code image, error names) cross unchanged because
+     * both sides share one address space. */
+    int (*p_hipInit)(unsigned int flags);
+    int (*p_hipMemGetInfo)(u64 *freeBytes, u64 *totalBytes);
+    int (*p_hipEventDestroy)(void *event);
+    const char *(*p_hipGetErrorName)(int error);
+    int (*p_hipStreamCreate)(void **stream);
+    int (*p_hipHostFree)(void *ptr);
+    int (*p_hipModuleLoadData)(void **module, const void *image);
+    int (*p_hipModuleGetFunction)(void **function, void *module, const char *name);
+    int (*p_hipModuleLaunchKernel)(void *function, unsigned int gridX, unsigned int gridY,
+                                   unsigned int gridZ, unsigned int blockX, unsigned int blockY,
+                                   unsigned int blockZ, unsigned int sharedMemBytes, void *stream,
+                                   void **kernelParams, void **extra);
+    int (*p_hipModuleUnload)(void *module);
+    int (*p_hipStreamQuery)(void *stream);
+    int (*p_hipMemcpy2DAsync)(void *dst, u64 dpitch, const void *src, u64 spitch, u64 width,
+                              u64 height, int kind, void *stream);
+    int (*p_hipExtModuleLaunchKernel)(void *function, unsigned int globalX, unsigned int globalY,
+                                      unsigned int globalZ, unsigned int localX, unsigned int localY,
+                                      unsigned int localZ, u64 sharedMemBytes, void *stream,
+                                      void **kernelParams, void **extra, void *startEvent,
+                                      void *stopEvent, unsigned int flags);
+    int (*p_hipDeviceGetName)(char *name, int len, int device);
 } DlssnrHipBridge;
 
 #endif

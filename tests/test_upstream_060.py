@@ -53,27 +53,28 @@ class Release060(unittest.TestCase):
              'hipDeviceGetStreamPriorityRange', 'hipStreamCreateWithPriority',
              'hipStreamDestroy'} | NEW_IMPORTS)
 
-    def test_trampoline_source_exports_exactly_the_imports(self):
+    def test_trampoline_source_exports_the_imports_and_the_extras(self):
         source = (ROOT / 'sources/trampoline/amdhip64_7_pe.c').read_text()
         names = set(re.findall(r'^EXPORT\s[^(\n]*?\b(_{0,2}hip\w+)\s*\(', source, re.M))
-        self.assertEqual(names, set(upstream.HIP_IMPORTS))
+        self.assertEqual(names, set(upstream.HIP_EXPORTS))
+        self.assertTrue(upstream.HIP_IMPORTS <= names)
 
     @unittest.skipUnless((ROOT / 'assets/amdhip64_7.dll').is_file(), 'built trampoline not present')
-    def test_built_trampoline_exports_exactly_the_imports(self):
+    def test_built_trampoline_exports_the_imports_and_the_extras(self):
         info = pe_info(ROOT / 'assets/amdhip64_7.dll')
-        self.assertEqual(sorted(info['exports']), sorted(upstream.HIP_IMPORTS))
-        self.assertEqual(len(info['exports']), 40)
+        self.assertEqual(sorted(info['exports']), sorted(upstream.HIP_EXPORTS))
+        self.assertEqual(len(info['exports']), len(upstream.HIP_EXPORTS))
 
-    def test_bridge_abi_5_contract(self):
+    def test_bridge_abi_6_contract(self):
         manifest = json.loads((ROOT / 'assets/manifest.json').read_text())
-        self.assertEqual(manifest['hip_bridge_abi'], 5)
+        self.assertEqual(manifest['hip_bridge_abi'], 6)
         header = (ROOT / 'native/hip_bridge.h').read_text()
-        self.assertIn('0x354849504E524C44ULL', header)
-        self.assertIn('"DLNRHIP5"', header)
-        self.assertIn('DLSSNR_HIP_ABI_V5', (ROOT / 'native/hip_bridge.c').read_text())
+        self.assertIn('0x364849504E524C44ULL', header)
+        self.assertIn('"DLNRHIP6"', header)
+        self.assertIn('DLSSNR_HIP_ABI_V6', (ROOT / 'native/hip_bridge.c').read_text())
         manifest['files'] = {name: '0' * 64 for name in upstream.COMPONENTS}
         assets.require_deployable(manifest)
-        for old in (1, 2, 3, 4):
+        for old in (1, 2, 3, 4, 5):
             with self.subTest(old=old), self.assertRaises(RuntimeError):
                 assets.require_deployable(dict(manifest, hip_bridge_abi=old))
 

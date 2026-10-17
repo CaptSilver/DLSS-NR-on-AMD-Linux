@@ -19,7 +19,7 @@
 #include <errno.h>
 
 /* Keep stubs in g_bridge forever. Real HIP lives in `real`. */
-const char dlssnr_hip_abi_marker[] = "DLSSNR_HIP_ABI_V5";
+const char dlssnr_hip_abi_marker[] = "DLSSNR_HIP_ABI_V6";
 static DlssnrHipBridge g_bridge;
 static DlssnrHipBridge real;
 static void *g_hip;
@@ -377,6 +377,22 @@ static int ensure_hip(void) {
     real.p_hipHostGetDevicePointer = must_dlsym("hipHostGetDevicePointer");
     if (!real.p_hipHostMalloc || !real.p_hipHostGetDevicePointer)
         return -1;
+    /* Module-API and lifecycle calls. A runtime lacking one only loses that
+     * call (its stub returns 3), so none of these gate g_hip_ok. */
+    real.p_hipInit = must_dlsym("hipInit");
+    real.p_hipMemGetInfo = must_dlsym("hipMemGetInfo");
+    real.p_hipEventDestroy = must_dlsym("hipEventDestroy");
+    real.p_hipGetErrorName = must_dlsym("hipGetErrorName");
+    real.p_hipStreamCreate = must_dlsym("hipStreamCreate");
+    real.p_hipHostFree = must_dlsym("hipHostFree");
+    real.p_hipModuleLoadData = must_dlsym("hipModuleLoadData");
+    real.p_hipModuleGetFunction = must_dlsym("hipModuleGetFunction");
+    real.p_hipModuleLaunchKernel = must_dlsym("hipModuleLaunchKernel");
+    real.p_hipModuleUnload = must_dlsym("hipModuleUnload");
+    real.p_hipStreamQuery = must_dlsym("hipStreamQuery");
+    real.p_hipMemcpy2DAsync = must_dlsym("hipMemcpy2DAsync");
+    real.p_hipExtModuleLaunchKernel = must_dlsym("hipExtModuleLaunchKernel");
+    real.p_hipDeviceGetName = must_dlsym("hipDeviceGetName");
     g_hip_ok = 1;
     if (real.p_hipEventCreate)
         real.p_hipEventCreate(&g_done_event);
@@ -883,6 +899,92 @@ static int stub_hostgetdevptr(void **dev, void *host, unsigned int flags) {
     if (result) logmsg("host device pointer failed err=%d", result);
     return result;
 }
+static int stub_init(unsigned int flags) {
+    if (ensure_hip() || !real.p_hipInit) return 3;
+    return real.p_hipInit(flags);
+}
+static int stub_meminfo(u64 *free_bytes, u64 *total_bytes) {
+    if (ensure_hip() || !real.p_hipMemGetInfo) return 3;
+    return real.p_hipMemGetInfo(free_bytes, total_bytes);
+}
+static int stub_evdestroy(void *event) {
+    if (ensure_hip() || !real.p_hipEventDestroy) return 3;
+    return real.p_hipEventDestroy(event);
+}
+/* The string belongs to HIP and the PE side reads the same address space. */
+static const char *stub_errname(int e) {
+    if (ensure_hip() || !real.p_hipGetErrorName) return "hip bridge not ready";
+    return real.p_hipGetErrorName(e);
+}
+static int stub_streamcreate(void **stream) {
+    if (ensure_hip() || !real.p_hipStreamCreate) return 3;
+    return real.p_hipStreamCreate(stream);
+}
+static int stub_hostfree(void *ptr) {
+    if (ensure_hip() || !real.p_hipHostFree) return 3;
+    return real.p_hipHostFree(ptr);
+}
+static int stub_modload(void **module, const void *image) {
+    if (ensure_hip() || !real.p_hipModuleLoadData) return 3;
+    int result = real.p_hipModuleLoadData(module, image);
+    if (result) logmsg("module load failed err=%d", result);
+    return result;
+}
+static int stub_modfunc(void **function, void *module, const char *name) {
+    if (ensure_hip() || !real.p_hipModuleGetFunction) return 3;
+    int result = real.p_hipModuleGetFunction(function, module, name);
+    if (result) logmsg("module function %s failed err=%d", name ? name : "(null)", result);
+    return result;
+}
+/* kernelParams / extra are arrays of pointers into the caller's memory; they
+ * are consumed during the call, so they cross unchanged. */
+static int stub_modlaunch(void *function, unsigned int gx, unsigned int gy, unsigned int gz,
+        unsigned int bx, unsigned int by, unsigned int bz, unsigned int shared, void *stream,
+        void **params, void **extra) {
+    if (ensure_hip() || !real.p_hipModuleLaunchKernel) return 3;
+    return real.p_hipModuleLaunchKernel(function, gx, gy, gz, bx, by, bz, shared, stream, params,
+                                        extra);
+}
+static int stub_modunload(void *module) {
+    if (ensure_hip() || !real.p_hipModuleUnload) return 3;
+    return real.p_hipModuleUnload(module);
+}
+static int stub_streamquery(void *stream) {
+    if (ensure_hip() || !real.p_hipStreamQuery) return 3;
+    return real.p_hipStreamQuery(stream);
+}
+static int stub_memcpy2d_async(void *dst, u64 dpitch, const void *src, u64 spitch, u64 width,
+        u64 height, int kind, void *stream) {
+    if (ensure_hip() || !real.p_hipMemcpy2DAsync) return 3;
+    return real.p_hipMemcpy2DAsync(dst, dpitch, src, spitch, width, height, kind, stream);
+}
+static int stub_extlaunch(void *function, unsigned int gx, unsigned int gy, unsigned int gz,
+        unsigned int lx, unsigned int ly, unsigned int lz, u64 shared, void *stream, void **params,
+        void **extra, void *start, void *stop, unsigned int flags) {
+    if (ensure_hip() || !real.p_hipExtModuleLaunchKernel) return 3;
+    return real.p_hipExtModuleLaunchKernel(function, gx, gy, gz, lx, ly, lz, shared, stream, params,
+                                           extra, start, stop, flags);
+}
+/* DLSSNR_HIP_DEVICE_NAME lets the launcher report the name the D3D12 adapter
+ * has under vkd3d, which the game side compares against hipDeviceGetName. The
+ * real call still runs first so an invalid device keeps its error. */
+static int stub_devname(char *name, int len, int device) {
+    if (ensure_hip() || !real.p_hipDeviceGetName) return 3;
+    int result = real.p_hipDeviceGetName(name, len, device);
+    const char *override = getenv("DLSSNR_HIP_DEVICE_NAME");
+    if (result || !override || !override[0]) return result;
+    if (!name || len <= 0) return 1;
+    size_t n = strlen(override);
+    if (n > (size_t)len - 1) {
+        n = (size_t)len - 1;
+        /* Do not end the string inside a UTF-8 sequence. */
+        while (n > 0 && ((unsigned char)override[n] & 0xC0) == 0x80)
+            n--;
+    }
+    memcpy(name, override, n);
+    name[n] = 0;
+    return 0;
+}
 static int stub_streamsync(void *stream) {
     if (ensure_hip() || !real.p_hipStreamSynchronize) return 3;
     int result = real.p_hipStreamSynchronize(stream);
@@ -986,6 +1088,20 @@ __attribute__((constructor)) static void dlssnr_hip_init(void) {
     g_bridge.p_hipStreamDestroy = stub_streamdestroy;
     g_bridge.p_hipHostMalloc = stub_hostmalloc;
     g_bridge.p_hipHostGetDevicePointer = stub_hostgetdevptr;
+    g_bridge.p_hipInit = stub_init;
+    g_bridge.p_hipMemGetInfo = stub_meminfo;
+    g_bridge.p_hipEventDestroy = stub_evdestroy;
+    g_bridge.p_hipGetErrorName = stub_errname;
+    g_bridge.p_hipStreamCreate = stub_streamcreate;
+    g_bridge.p_hipHostFree = stub_hostfree;
+    g_bridge.p_hipModuleLoadData = stub_modload;
+    g_bridge.p_hipModuleGetFunction = stub_modfunc;
+    g_bridge.p_hipModuleLaunchKernel = stub_modlaunch;
+    g_bridge.p_hipModuleUnload = stub_modunload;
+    g_bridge.p_hipStreamQuery = stub_streamquery;
+    g_bridge.p_hipMemcpy2DAsync = stub_memcpy2d_async;
+    g_bridge.p_hipExtModuleLaunchKernel = stub_extlaunch;
+    g_bridge.p_hipDeviceGetName = stub_devname;
     g_bridge.p_hipStreamSynchronize = stub_streamsync;
     g_bridge.p_hipEventRecord = stub_evrec;
     g_bridge.p_hipEventSynchronize = stub_evsync;

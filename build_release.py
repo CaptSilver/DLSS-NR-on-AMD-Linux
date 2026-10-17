@@ -10,7 +10,7 @@ import struct
 import tarfile
 import zipfile
 from dlssnr.games import pe_info
-from dlssnr.upstream import COMPONENTS, HIP_IMPORTS
+from dlssnr.upstream import COMPONENTS, HIP_EXPORTS
 from dlssnr import upstream
 
 ARCHIVE_ROOT = 'dlssnr-linux-portable'
@@ -50,14 +50,14 @@ def validate_components(root):
         if info['machine'] != 0x8664 or not info['is_dll']:
             raise ValueError(f'{name} is not a Win64 DLL')
         if name == 'amdhip64_7.dll':
-            missing = HIP_IMPORTS - set(info['exports'])
+            missing = HIP_EXPORTS - set(info['exports'])
             if missing:
                 raise ValueError('Trampoline is missing HIP exports: ' + ', '.join(sorted(missing)))
     bridge = content['libdlssnr_hip_bridge.so']
     if (bridge[:5] != b'\x7fELF\x02' or len(bridge) < 64
             or struct.unpack_from('<H', bridge, 18)[0] != 62
             or b'DLSSNR_ORDERED_ABI_V3' not in bridge
-            or b'DLSSNR_HIP_ABI_V5' not in bridge):
+            or b'DLSSNR_HIP_ABI_V6' not in bridge):
         raise ValueError('Missing x86_64 ordered HIP bridge')
     if b'NR: cannot establish producer/consumer boundary' not in content['d3d12core.dll']:
         raise ValueError('D3D12 core lacks the ordered integration patch')

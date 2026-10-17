@@ -19,7 +19,7 @@ class CandidateProvenance(unittest.TestCase):
         self.assertEqual(p['upstream_mod']['setup_sha256'], upstream.SETUP_SHA256)
         self.assertEqual(p['upstream_mod']['setup_bytes'], upstream.SETUP_BYTES)
         self.assertEqual(p['upstream_mod']['payload_sha256'], upstream.PAYLOAD_SHA256)
-        self.assertEqual(i['hip_exports'], len(upstream.HIP_IMPORTS))
+        self.assertEqual(i['hip_exports'], len(upstream.HIP_EXPORTS))
         magic = re.search(r'#define DLSSNR_HIP_MAGIC (0x[0-9A-Fa-f]+)ULL',
                           (ROOT / 'native/hip_bridge.h').read_text())
         self.assertIsNotNone(magic)

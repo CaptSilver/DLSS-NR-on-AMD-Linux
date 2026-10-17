@@ -41,6 +41,13 @@ HIP_IMPORTS = frozenset(('__hipPopCallConfiguration', '__hipPushCallConfiguratio
     'hipOccupancyMaxActiveBlocksPerMultiprocessor', 'hipRuntimeGetVersion', 'hipSetDevice', 'hipStreamCreateWithFlags',
     'hipStreamSynchronize', 'hipDeviceGetStreamPriorityRange', 'hipStreamCreateWithPriority', 'hipStreamDestroy',
     'hipHostMalloc', 'hipHostGetDevicePointer'))
+# Exports the trampoline offers beyond what the upstream runtime imports: the
+# module API and the calls around it, for runtimes that use them.
+HIP_EXTRA_EXPORTS = frozenset(('hipInit', 'hipMemGetInfo', 'hipEventDestroy', 'hipGetErrorName',
+    'hipStreamCreate', 'hipHostFree', 'hipModuleLoadData', 'hipModuleLoad', 'hipModuleGetFunction',
+    'hipModuleLaunchKernel', 'hipModuleUnload', 'hipStreamQuery', 'hipMemcpy2DAsync',
+    'hipExtModuleLaunchKernel', 'hipDeviceGetName'))
+HIP_EXPORTS = HIP_IMPORTS | HIP_EXTRA_EXPORTS
 
 
 def digest(data):
