@@ -152,12 +152,17 @@ static int d3dkmt_sync_handle_to_fd(void *nt_handle) {
     pthread_mutex_unlock(&mu);
     if (!open_sync || !get_fd || !destroy_sync)
         return -ENOSYS;
+    /* One line per win32u call: this path has stopped mid-way in games, and
+     * the last line written shows which call it was. */
+    logmsg("d3dkmt sync open handle=%p", nt_handle);
     local = open_sync(0, nt_handle);
     if (!local) {
         logmsg("d3dkmt_open_sync failed handle=%p", nt_handle);
         return -EBADF;
     }
+    logmsg("d3dkmt sync get_fd local=%u", local);
     fd = get_fd(local);
+    logmsg("d3dkmt sync destroy local=%u fd=%d", local, fd);
     destroy_sync(local);
     logmsg("d3dkmt sync local=%u fd=%d", local, fd);
     return fd < 0 ? -EBADF : fd;
